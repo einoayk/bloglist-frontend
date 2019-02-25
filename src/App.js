@@ -2,15 +2,19 @@ import React, { useState, useEffect } from 'react'
 import Blog from './components/Blog'
 import blogService from './services/blogs'
 import loginService from './services/login'
-import createBlog from './components/CreateBlog';
+import CreateBlog from './components/CreateBlog'
+import LoginForm from './components/LoginForm'
+import Togglable from './components/Togglable'
+import { useField } from './hooks'
 
-const App = () => {
-  const [blogs, setBlogs] = useState([])
-  const [username, setUsername] = useState('') 
-  const [password, setPassword] = useState('') 
+const App = () => {  
+  const [blogs, setBlogs] = useState([])  
   const [errorMessage, setErrorMessage] = useState(null)
   const [user, setUser] = useState(null)
 
+  const username = useField('text')
+  const password = useField('password')
+  
   useEffect(() => {
     blogService.getAll().then(blogs =>
       setBlogs( blogs )
@@ -26,14 +30,25 @@ const App = () => {
     }
   }, [])
 
+ 
+  const handleBlogAdd = (blogs) => {    
+    setBlogs(blogs)
+  }
+
+  const userName = username.value
+  const passWord = password.value
+  console.log(username)
+  console.log(password)
 
   const handleLogin = async (event) => {
     event.preventDefault()
-    console.log('logging in with', username, password)
+    console.log('logging in with', username.value, password.value)
     try {
       var user = await loginService.login({
-        username, password,
+        username, password,        
       })
+
+      console.log(`haloo ${username}`)
 
       window.localStorage.setItem(
         'loggedBlogappUser', JSON.stringify(user)
@@ -41,8 +56,9 @@ const App = () => {
 
       blogService.setToken(user.token)
       setUser(user)
-      setUsername('')
-      setPassword('')
+      
+      console.log(username)
+      console.log(password)
     } catch (exception) {
       setErrorMessage('käyttäjätunnus tai salasana virheellinen')
       setTimeout(() => {
@@ -51,47 +67,33 @@ const App = () => {
     }
   }
 
-  const handleLogOut = async (event) => {
+  const handleLogOut = (event) => {
     event.preventDefault()
-    await setUser(null)
+    setUser(null)
     window.localStorage.removeItem('loggedBlogappUser')    
   }
   
   if (user === null) {
     return (
-      <div>
-        <h2>Log in to application</h2>
-          <form onSubmit={handleLogin}>
-          <div>
-            käyttäjätunnus
-              <input
-              type="text"
-              value={username}
-              name="Username"
-              onChange={({ target }) => setUsername(target.value)}
-            />
-          </div>
-          <div>
-            salasana
-              <input
-              type="password"
-              value={password}
-              name="Password"
-              onChange={({ target }) => setPassword(target.value)}
-            />
-          </div>
-          <button type="submit">kirjaudu</button>
-        </form>
-      </div>
-      
+      <Togglable buttonLabel='login'>
+        <LoginForm
+          username={username.value}
+          password={password.value}
+          handleUsernameChange={username.onChange}
+          handlePasswordChange={password.onChange}
+          handleSubmit={handleLogin}
+        />
+      </Togglable>
     )
   }
   return (
-    <div>      
+    <div> 
+      {errorMessage}     
       <h2>blogs</h2>
       <button onClick={handleLogOut}>logout</button>
       <h2>create new</h2>
-      {createBlog}
+      <CreateBlog blogs={blogs} handleBlogAdd={handleBlogAdd}/>
+      
       <h3>{user.username} logged in</h3>
       {blogs.map(blog =>
         <Blog key={blog.id} blog={blog} />
